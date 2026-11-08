@@ -66,7 +66,11 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  var fold = function (t) { return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ς/g, 'σ'); };
+  // Accents and common Greek spelling slips do not matter (η/ι/υ/ει/οι, ω/ο, αι/ε).
+  var fold = function (t) {
+    return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ς/g, 'σ')
+      .replace(/ει|οι/g, 'ι').replace(/[ηυ]/g, 'ι').replace(/ω/g, 'ο').replace(/αι/g, 'ε');
+  };
   var q = document.getElementById('am-q');
   var none = document.getElementById('am-none');
   if (q) {
