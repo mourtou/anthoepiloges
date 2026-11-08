@@ -227,9 +227,78 @@
 
   var waIcon = '<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3.2A12.7 12.7 0 0 0 5.1 22.4L3.3 28.8l6.6-1.7A12.7 12.7 0 1 0 16 3.2zm0 23.2c-2 0-3.9-.5-5.6-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.5 10.5 0 1 1 16 26.4zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.3.3-.6.1-.2 0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.8s1.2 3.3 1.4 3.5c.2.2 2.4 3.6 5.8 5.1 2.8 1.1 3.4.9 4 .8.6-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.1-.2-.3-.3-.6-.4z"/></svg>';
 
+
+  /* Seasonal order of the shop sections (same rules as the WordPress theme). */
+  var SEASONS = ['xristougenna', 'gia-tin-agapi', 'mera-gynaikas', 'pasxa', 'giorti-miteras', 'giorti-patera', 'apofoitisi', 'halloween'];
+  function easter(y) {
+    var a = y % 4, b = y % 7, c = y % 19, d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7;
+    var m = Math.floor((d + e + 114) / 31), day = ((d + e + 114) % 31) + 1;
+    return new Date(y, m - 1, day + 13, 12);
+  }
+  function nthSunday(y, m, n) { var f = new Date(y, m - 1, 1, 12); return new Date(y, m - 1, 1 + ((7 - f.getDay()) % 7) + 7 * (n - 1), 12); }
+  function seasonDate(slug, y) {
+    switch (slug) {
+      case 'xristougenna': return new Date(y, 11, 25, 12);
+      case 'gia-tin-agapi': return new Date(y, 1, 14, 12);
+      case 'mera-gynaikas': return new Date(y, 2, 8, 12);
+      case 'pasxa': return easter(y);
+      case 'giorti-miteras': return nthSunday(y, 5, 2);
+      case 'giorti-patera': return nthSunday(y, 6, 3);
+      case 'apofoitisi': return new Date(y, 5, 25, 12);
+      case 'halloween': return new Date(y, 9, 31, 12);
+    }
+    return null;
+  }
+  function seasonDays(slug) {
+    var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 12);
+    for (var y = t.getFullYear(); y <= t.getFullYear() + 1; y++) {
+      var d = seasonDate(slug, y);
+      if (!d) { return null; }
+      var days = Math.round((d - t) / 864e5);
+      if (days >= 0) { return days; }
+    }
+    return null;
+  }
+  function seasonRank(slug, i) {
+    if (slug === 'prosfores') { return -2; }
+    if (slug === 'best-sellers') { return -1; }
+    var days = seasonDays(slug);
+    if (days !== null) { return days <= 60 ? days : 100000 + days; }
+    var lead = ['louloudia', 'dora'].indexOf(slug);
+    return lead >= 0 ? 1000 + lead : 2000 + i;
+  }
+  function seasonOrder() {
+    var wrap = document.querySelector('.am-sections');
+    if (!wrap) { return; }
+    var secs = Array.prototype.slice.call(wrap.querySelectorAll(':scope > section.am-sec'));
+    var rank = {};
+    secs.forEach(function (s, i) { rank[s.id.slice(2)] = seasonRank(s.id.slice(2), i); });
+    var tail = wrap.querySelector('#am-none');
+    secs.sort(function (a, b) { return rank[a.id.slice(2)] - rank[b.id.slice(2)]; }).forEach(function (s) { wrap.insertBefore(s, tail); });
+    var nav = document.querySelector('.am-nav');
+    if (nav) {
+      Array.prototype.slice.call(nav.querySelectorAll('a[data-s]'))
+        .sort(function (a, b) { return (rank[a.getAttribute('data-s')] || 0) - (rank[b.getAttribute('data-s')] || 0); })
+        .forEach(function (a) { nav.appendChild(a); });
+    }
+    // Main menu: the occasion link points at the nearest occasion.
+    var next = SEASONS.filter(function (s) { return document.getElementById('s-' + s) || (DATA && DATA.sec && DATA.sec[s]); })
+      .map(function (s) { return [s, seasonDays(s)]; }).sort(function (a, b) { return a[1] - b[1]; })[0];
+    if (next && DATA && DATA.sec) {
+      document.querySelectorAll('.antho-menu a').forEach(function (a) {
+        var m = (a.getAttribute('href') || '').match(/#s-([a-z-]+)$/);
+        if (m && SEASONS.indexOf(m[1]) >= 0 && m[1] !== next[0]) {
+          a.setAttribute('href', a.getAttribute('href').replace(m[1], next[0]));
+          a.textContent = DATA.sec[next[0]];
+        }
+      });
+    }
+  }
+
   memory = (function () { try { return JSON.parse(window.localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } })();
   fetch(ROOT + 'static/products.json').then(function (r) { return r.json(); }).then(function (d) {
     DATA = d;
+    seasonOrder();
     refresh();
     document.querySelectorAll('.as-buy[data-sku]').forEach(buyBox);
     var c = document.getElementById('as-cart');
