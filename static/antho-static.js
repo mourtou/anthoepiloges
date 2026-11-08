@@ -139,7 +139,7 @@
   function cartPage(root) {
     var cart = store.get().filter(function (it) { return DATA.p[it.sku]; });
     if (!cart.length) {
-      root.innerHTML = '<h1>Καλάθι</h1><div class="as-empty"><p>Το καλάθι σας είναι άδειο.</p><a class="button" href="' + ROOT + 'shop/">Δείτε το κατάστημα</a></div>';
+      root.innerHTML = '<h1>Καλάθι</h1><div class="as-empty"><p>Το καλάθι σας είναι άδειο.</p><a class="button" href="' + ROOT + 'shop/">Αγοράστε τώρα</a></div>';
       return;
     }
     var h = '<h1>Καλάθι</h1><ul class="as-lines">';
